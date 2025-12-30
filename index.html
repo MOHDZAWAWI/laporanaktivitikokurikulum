@@ -13,9 +13,25 @@
     body { font-family: 'Plus Jakarta Sans', sans-serif; }
     @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
     .animate-spin-custom { animation: spin 1s linear infinite; }
+    
+    /* Hilangkan arrow pada input number */
+    input::-webkit-outer-spin-button,
+    input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    input[type=number] { -moz-appearance: textfield; }
+
+    /* Gaya khusus untuk placeholder */
+    input::placeholder, textarea::placeholder {
+      font-size: 0.9rem;
+      opacity: 0.2;
+      font-weight: 700;
+      color: #64748b;
+    }
+    
+    .scale-in { animation: scaleIn 0.2s ease-out; }
+    @keyframes scaleIn { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
   </style>
 </head>
-<body class="bg-[#f1f5f9] min-h-screen text-slate-800">
+<body class="bg-[#f8fafc] min-h-screen text-slate-800">
 
   <div id="root"></div>
 
@@ -27,7 +43,6 @@
         trash: <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>,
         camera: <><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></>,
         loader: <path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83"/>,
-        users: <><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></>,
         check: <polyline points="20 6 9 17 4 12" />,
         alert: <><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></>,
         download: <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>,
@@ -51,7 +66,8 @@
 
       const [formData, setFormData] = useState({
         jenisLaporan: '', perjumpaanKali: '', tarikh: '', hari: '', masa: '1.45 - 3.45 PETANG', tempat: '',
-        guruHadir: Array(8).fill(''), hadirLelaki: '0', totalLelaki: '0', hadirPerempuan: '0', totalPerempuan: '0',
+        guruHadir: Array(8).fill(''), 
+        hadirLelaki: '', totalLelaki: '', hadirPerempuan: '', totalPerempuan: '',
         nilaiSivik: '', aktivitiDijalankan: '', refleksiImpak: '',
         disediakanOleh: '', jawatanDisediakan: 'GURU PENASIHAT',
         disemakOleh: 'PENYELARAS UNIT', jawatanDisemak: 'PENYELARAS KOKURIKULUM',
@@ -68,6 +84,10 @@
         "NURIZAIDAWATY BINTI MD NAWI", "ROBAIYYAH BINTI ALIAS", "ROSLINA BINTI A HAZAH", "SITI AISHAH BINTI MOHD SUBRI",
         "SITI RUQIYAH BINTI ABDUL HAMID", "UMI SUMAYYAH BINTI MOHD ZAID", "WAN NURUL INSYIRAH BINTI WAN AZHAR", "ZABIDAH BINTI YAHYA"
       ].sort();
+
+      const senaraiNilaiSivik = [
+        "Kasih Sayang", "Hormat-menghormati", "Bertanggungjawab", "Kegembiraan"
+      ];
 
       useEffect(() => {
         const loadScript = (src) => {
@@ -128,7 +148,6 @@
         });
       };
 
-      // Fungsi untuk menjana nama fail yang bersih
       const getFileName = () => {
         const name = formData.disediakanOleh ? formData.disediakanOleh.replace(/\s+/g, '_').toUpperCase() : 'LAPORAN';
         const date = formData.tarikh || 'BARU';
@@ -143,14 +162,12 @@
         const margin = 15; 
         let currentY = 4;
 
-        // Logo
         try { doc.addImage(schoolLogoUrl, 'PNG', (pageWidth/2) - 10, currentY, 20, 20); currentY += 24; } catch(e) { currentY += 5; }
         doc.setFont("helvetica", "bold").setFontSize(10.5).text(formData.jenisLaporan, pageWidth/2, currentY, { align: 'center' });
         currentY += 4;
         doc.setDrawColor(0).setLineWidth(0.5).line(margin, currentY, pageWidth-margin, currentY);
         currentY += 8;
 
-        // Maklumat Asas
         const drawField = (label, value, x, y) => {
           doc.setFont("helvetica", "bold").setFontSize(9).text(label, x, y);
           doc.text(":", x + 38, y); 
@@ -165,7 +182,6 @@
         drawField("TEMPAT", formData.tempat, margin, currentY);
         currentY += 8;
 
-        // Jadual Guru
         const guruAktif = formData.guruHadir.filter(n => n.trim() !== "");
         const rows = [];
         for (let i = 0; i < 4; i++) rows.push([guruAktif[i] || "", "", guruAktif[i+4] || "", ""]);
@@ -180,18 +196,21 @@
         });
         currentY = doc.lastAutoTable.finalY + 6;
 
-        // Kehadiran
         doc.setFont("helvetica", "bold").setFontSize(9).text("KEHADIRAN MURID", margin, currentY);
         currentY += 4;
         const boxW = (pageWidth - (margin*2) - 10) / 3;
-        [{ l: "LELAKI", v: `${formData.hadirLelaki} / ${formData.totalLelaki}` }, { l: "PEREMPUAN", v: `${formData.hadirPerempuan} / ${formData.totalPerempuan}` }, { l: "JUMLAH", v: `${Number(formData.hadirLelaki)+Number(formData.hadirPerempuan)} / ${Number(formData.totalLelaki)+Number(formData.totalPerempuan)}` }].forEach((s, i) => {
+        const totalHadir = Number(formData.hadirLelaki || 0) + Number(formData.hadirPerempuan || 0);
+        const totalSemua = Number(formData.totalLelaki || 0) + Number(formData.totalPerempuan || 0);
+
+        [{ l: "LELAKI", v: `${formData.hadirLelaki || 0} / ${formData.totalLelaki || 0}` }, 
+         { l: "PEREMPUAN", v: `${formData.hadirPerempuan || 0} / ${formData.totalPerempuan || 0}` }, 
+         { l: "JUMLAH", v: `${totalHadir} / ${totalSemua}` }].forEach((s, i) => {
           doc.setDrawColor(180).rect(margin + i*(boxW+5), currentY, boxW, 10);
           doc.setFontSize(7).text(s.l, margin + i*(boxW+5) + boxW/2, currentY + 4, { align: 'center' });
           doc.setFontSize(9).text(s.v, margin + i*(boxW+5) + boxW/2, currentY + 8, { align: 'center' });
         });
         currentY += 16;
 
-        // Teks
         const writeSection = (title, content, maxLines = 4) => {
           doc.setFont("helvetica", "bold").setFontSize(9).text(title, margin, currentY);
           currentY += 4; doc.setFont("helvetica", "normal");
@@ -204,7 +223,6 @@
         writeSection("AKTIVITI DIJALANKAN:", formData.aktivitiDijalankan, 6);
         writeSection("REFLEKSI / IMPAK:", formData.refleksiImpak, 4);
 
-        // Gambar
         if (images.length > 0) {
           const iw = 75; const ih = 40; const gap = 10;
           const totalW = (images.length * iw) + ((images.length - 1) * gap);
@@ -216,7 +234,6 @@
           });
         }
 
-        // Tandatangan
         const bottomY = pageHeight - 40; 
         const printableWidth = pageWidth - (margin * 2);
         const col1X = margin;
@@ -236,7 +253,7 @@
 
       const handleSavePDF = async () => {
         if (!formData.jenisLaporan || !formData.disediakanOleh) {
-            setNotification({ type: 'error', message: 'Sila lengkapkan laporan (termasuk nama guru penyedia) sebelum memuat turun.' });
+            setNotification({ type: 'error', message: 'Sila lengkapkan laporan dan pilih nama guru penyedia.' });
             return;
         }
         setIsGenerating(true);
@@ -259,13 +276,11 @@
         setIsSavingToDrive(true);
         try {
           const doc = await createPDFInstance();
-          
           const pdfBase64 = doc.output('datauristring').split(',')[1];
           const fileName = getFileName();
-
           const webAppUrl = 'https://script.google.com/macros/s/AKfycbwBxAOWGtwoZohYErXOivknU_rDiLDFugwzHpoHcv-Q0rOu8zJxxta4PEJZ6Sr6BlhX/exec'; 
 
-          const res = await fetch(webAppUrl, {
+          await fetch(webAppUrl, {
             method: 'POST',
             mode: 'no-cors', 
             headers: { 'Content-Type': 'application/json' },
@@ -274,45 +289,43 @@
 
           setNotification({ 
             type: 'success', 
-            message: `Aplikasi telah menghantar fail "${fileName}" ke Google Drive anda.` 
+            message: `Laporan "${fileName}" telah berjaya dihantar ke Google Drive.` 
           });
 
         } catch (e) { 
-          console.error(e); 
-          setNotification({ type: 'error', message: 'Gagal menghantar ke Google Drive. Sila pastikan skrip anda aktif.' });
+          setNotification({ type: 'error', message: 'Gagal menghantar ke Google Drive.' });
         } finally { 
           setIsSavingToDrive(false); 
         }
       };
 
       return (
-        <div className="max-w-4xl mx-auto my-0 md:my-12 bg-white shadow-2xl rounded-none md:rounded-[3rem] overflow-hidden">
+        <div className="max-w-4xl mx-auto my-0 md:my-10 bg-white shadow-[0_20px_60px_-15px_rgba(0,0,0,0.1)] rounded-none md:rounded-[2.5rem] overflow-hidden">
           
           {notification && (
-            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[100] flex items-center justify-center p-6">
-              <div className="bg-white rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl">
-                <div className={`w-16 h-16 rounded-full mx-auto flex items-center justify-center mb-4 ${notification.type === 'success' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
-                  <Icon name={notification.type === 'success' ? 'check' : 'alert'} size={32} />
+            <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[100] flex items-center justify-center p-6">
+              <div className="bg-white rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl scale-in">
+                <div className={`w-14 h-14 rounded-full mx-auto flex items-center justify-center mb-4 ${notification.type === 'success' ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-600'}`}>
+                  <Icon name={notification.type === 'success' ? 'check' : 'alert'} size={28} />
                 </div>
                 <h3 className="text-xl font-bold mb-2 text-slate-900">{notification.type === 'success' ? 'Berjaya' : 'Maklumat'}</h3>
                 <p className="text-slate-500 text-sm mb-6 leading-relaxed">{notification.message}</p>
-                <button onClick={() => setNotification(null)} className="w-full py-4 bg-slate-900 text-white rounded-2xl font-bold hover:bg-black transition-colors">Tutup</button>
+                <button onClick={() => setNotification(null)} className="w-full py-3.5 bg-slate-900 text-white rounded-xl font-bold hover:bg-black transition-colors">OK, Faham</button>
               </div>
             </div>
           )}
 
-          <header className="relative bg-slate-900 text-white pt-12 pb-14 px-6 text-center">
-            <img src={schoolLogoUrl} alt="Logo" className="w-24 h-24 mx-auto mb-6 drop-shadow-lg" />
-            <h1 className="text-2xl md:text-3xl font-black uppercase tracking-tight mb-2">LAPORAN AKTIVITI KOKURIKULUM</h1>
-            <h2 className="text-lg font-medium text-slate-400 uppercase tracking-widest">SK Seri Bandi 2</h2>
+          <header className="relative bg-slate-900 text-white pt-10 pb-12 px-6 text-center border-b-4 border-indigo-500">
+            <img src={schoolLogoUrl} alt="Logo" className="w-20 h-20 mx-auto mb-5 drop-shadow-xl" />
+            <h1 className="text-xl md:text-2xl font-black uppercase tracking-tight mb-2">LAPORAN AKTIVITI KOKURIKULUM</h1>
+            <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-[0.3em]">SK Seri Bandi 2</h2>
           </header>
 
-          <div className="p-6 md:p-12 space-y-10">
+          <div className="p-6 md:p-10 space-y-10">
             <div className="space-y-6">
               <div>
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Jenis Laporan</label>
-                <select name="jenisLaporan" value={formData.jenisLaporan} onChange={handleInputChange} className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-xl font-bold text-slate-700 outline-none focus:border-indigo-500 transition-all">
-                  <option value="">- Pilih Jenis Laporan -</option>
+                <select name="jenisLaporan" value={formData.jenisLaporan} onChange={handleInputChange} className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700 outline-none focus:border-indigo-500 transition-all text-sm shadow-sm">
+                  <option value="">- PILIH LAPORAN -</option>
                   <option>LAPORAN AKTIVITI BADAN BERUNIFORM</option>
                   <option>LAPORAN AKTIVITI KELAB DAN PERSATUAN</option>
                   <option>LAPORAN AKTIVITI SUKAN DAN PERMAINAN</option>
@@ -320,40 +333,40 @@
                 </select>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                  <label className="text-[10px] font-black text-slate-400 uppercase block mb-1">Perjumpaan Kali Ke-</label>
-                  <input type="number" name="perjumpaanKali" value={formData.perjumpaanKali} onChange={handleInputChange} className="w-full bg-transparent font-black text-xl outline-none" />
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+                  <label className="text-[9px] font-black text-slate-400 uppercase block mb-1">Bil. Perjumpaan</label>
+                  <input type="number" name="perjumpaanKali" value={formData.perjumpaanKali} onChange={handleInputChange} className="w-full bg-transparent font-black text-lg outline-none" placeholder="0" />
                 </div>
-                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                  <label className="text-[10px] font-black text-slate-400 uppercase block mb-1">Tarikh</label>
-                  <input type="date" name="tarikh" value={formData.tarikh} onChange={handleInputChange} className="w-full bg-transparent font-bold outline-none" />
+                <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+                  <label className="text-[9px] font-black text-slate-400 uppercase block mb-1">Tarikh Aktiviti</label>
+                  <input type="date" name="tarikh" value={formData.tarikh} onChange={handleInputChange} className="w-full bg-transparent font-bold outline-none text-sm" />
                 </div>
-                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                  <label className="text-[10px] font-black text-slate-400 uppercase block mb-1">Hari</label>
-                  <input type="text" readOnly value={formData.hari} className="w-full bg-transparent font-bold text-indigo-600 outline-none" />
+                <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+                  <label className="text-[9px] font-black text-slate-400 uppercase block mb-1">Hari</label>
+                  <input type="text" readOnly value={formData.hari} className="w-full bg-transparent font-bold text-indigo-600 outline-none text-sm" />
                 </div>
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                 <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                  <label className="text-[10px] font-black text-slate-400 uppercase block mb-1">Tempat</label>
-                  <input type="text" name="tempat" value={formData.tempat} onChange={handleInputChange} className="w-full bg-transparent font-bold outline-none" />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                 <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+                  <label className="text-[9px] font-black text-slate-400 uppercase block mb-1">Tempat / Lokasi</label>
+                  <input type="text" name="tempat" value={formData.tempat} onChange={handleInputChange} className="w-full bg-transparent font-bold outline-none text-sm" placeholder="DEWAN GEMILANG" />
                 </div>
-                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                  <label className="text-[10px] font-black text-slate-400 uppercase block mb-1">Masa</label>
-                  <input type="text" name="masa" value={formData.masa} onChange={handleInputChange} className="w-full bg-transparent font-bold outline-none" />
+                <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+                  <label className="text-[9px] font-black text-slate-400 uppercase block mb-1">Masa Pelaksanaan</label>
+                  <input type="text" name="masa" value={formData.masa} onChange={handleInputChange} className="w-full bg-transparent font-bold outline-none text-sm" />
                 </div>
               </div>
             </div>
 
-            <section className="bg-slate-900 rounded-[2rem] p-8">
-              <h2 className="text-white font-black text-xs uppercase tracking-widest mb-6 flex items-center gap-2">
-                <span className="w-1 h-4 bg-indigo-500 rounded-full"></span> Kehadiran Guru
+            <section className="bg-slate-900 rounded-[2rem] p-7 shadow-xl">
+              <h2 className="text-white font-black text-[10px] uppercase tracking-[0.2em] mb-5 flex items-center gap-3">
+                <span className="w-6 h-[2px] bg-indigo-500"></span> Kehadiran Guru Penasihat
               </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
                 {formData.guruHadir.map((val, idx) => (
-                  <select key={idx} value={val} onChange={(e) => handleGuruChange(idx, e.target.value)} className="p-3 text-[11px] font-bold bg-slate-800 text-slate-300 border border-slate-700 rounded-xl outline-none focus:border-indigo-500 transition-all">
+                  <select key={idx} value={val} onChange={(e) => handleGuruChange(idx, e.target.value)} className="p-2.5 text-[10px] font-bold bg-slate-800 text-slate-300 border border-slate-700 rounded-lg outline-none focus:border-indigo-500 transition-all">
                     <option value="">- Guru {idx + 1} -</option>
                     {senaraiGuru.map(g => <option key={g} value={g} className="bg-white text-slate-900">{g}</option>)}
                   </select>
@@ -361,70 +374,112 @@
               </div>
             </section>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {[
-                { label: 'Hadir L', key: 'hadirLelaki', color: 'text-blue-600' },
-                { label: 'Jumlah L', key: 'totalLelaki', color: 'text-slate-400' },
-                { label: 'Hadir P', key: 'hadirPerempuan', color: 'text-pink-600' },
-                { label: 'Jumlah P', key: 'totalPerempuan', color: 'text-slate-400' }
-              ].map(f => (
-                <div key={f.key} className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                  <label className="text-[9px] font-black text-slate-400 uppercase block mb-1">{f.label}</label>
-                  <input type="number" name={f.key} value={formData[f.key]} onChange={handleInputChange} className={`w-full bg-transparent font-black text-2xl outline-none ${f.color}`} />
+            <section className="bg-slate-900 rounded-[2rem] p-7 shadow-xl">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-white font-black text-[10px] uppercase tracking-[0.2em] flex items-center gap-3">
+                  <span className="w-6 h-[2px] bg-emerald-500"></span> Statistik Kehadiran Murid
+                </h2>
+                <div className="px-3 py-1 bg-slate-800 rounded-full border border-slate-700">
+                   <span className="text-[9px] font-bold text-slate-400 uppercase">Jumlah: </span>
+                   <span className="text-[10px] font-black text-white">
+                    {(Number(formData.hadirLelaki) + Number(formData.hadirPerempuan)) || 0} / {(Number(formData.totalLelaki) + Number(formData.totalPerempuan)) || 0}
+                   </span>
                 </div>
-              ))}
-            </div>
-
-            <div className="space-y-6">
-              <textarea name="aktivitiDijalankan" value={formData.aktivitiDijalankan} placeholder="Aktiviti dijalankan..." onChange={handleInputChange} className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-2xl h-40 text-sm outline-none focus:border-indigo-500 transition-all shadow-inner"></textarea>
-              <textarea name="refleksiImpak" value={formData.refleksiImpak} placeholder="Refleksi / Impak..." onChange={handleInputChange} className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-2xl h-24 text-sm outline-none focus:border-indigo-500 transition-all shadow-inner"></textarea>
-            </div>
-
-            <section className="bg-indigo-50/50 p-8 rounded-[2rem] border-2 border-dashed border-indigo-200 text-center">
-              <label className={`inline-flex items-center gap-3 px-8 py-4 rounded-xl font-black text-xs transition-all shadow-lg mb-6 cursor-pointer ${images.length >= 2 ? 'bg-slate-200 text-slate-400' : 'bg-white text-indigo-600 hover:bg-indigo-600 hover:text-white'}`}>
-                <Icon name="camera" size={18} /> MUAT NAIK GAMBAR ({images.length}/2)
-                <input type="file" accept="image/*" multiple onChange={handleImageUpload} className="hidden" disabled={images.length >= 2} />
-              </label>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {images.map((img, i) => (
-                  <div key={i} className="relative aspect-video rounded-2xl overflow-hidden border-4 border-white shadow-xl group">
-                    <img src={img} className="w-full h-full object-cover" />
-                    <button onClick={() => setImages(images.filter((_, idx) => idx !== i))} className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Icon name="trash" size={14} />
-                    </button>
+              </div>
+              
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {[
+                  { label: 'HADIR (L)', key: 'hadirLelaki', color: 'text-blue-400', border: 'border-blue-500/30' },
+                  { label: 'JUMLAH (L)', key: 'totalLelaki', color: 'text-slate-400', border: 'border-slate-700' },
+                  { label: 'HADIR (P)', key: 'hadirPerempuan', color: 'text-pink-400', border: 'border-pink-500/30' },
+                  { label: 'JUMLAH (P)', key: 'totalPerempuan', color: 'text-slate-400', border: 'border-slate-700' }
+                ].map(f => (
+                  <div key={f.key} className={`bg-slate-800/50 px-4 py-4 rounded-xl border ${f.border} group transition-all hover:bg-slate-800`}>
+                    <label className="text-[10px] font-black text-slate-400 uppercase block mb-2 tracking-[0.1em]">{f.label}</label>
+                    <input 
+                      type="number" 
+                      name={f.key} 
+                      value={formData[f.key] === 0 ? '' : formData[f.key]} 
+                      onChange={handleInputChange} 
+                      placeholder="0"
+                      className={`w-full bg-transparent font-bold text-2xl outline-none ${f.color} text-center`} 
+                    />
                   </div>
                 ))}
               </div>
             </section>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 border-t pt-8">
+            <div className="space-y-6">
               <div>
-                <label className="text-[10px] font-black text-slate-400 uppercase mb-2 block">Disediakan Oleh</label>
-                <select name="disediakanOleh" value={formData.disediakanOleh} onChange={handleInputChange} className="w-full p-4 bg-slate-900 text-white rounded-xl font-bold text-xs outline-none shadow-lg">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Penerapan Nilai Sivik</label>
+                <select name="nilaiSivik" value={formData.nilaiSivik} onChange={handleInputChange} className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700 outline-none focus:border-indigo-500 transition-all text-sm">
+                  <option value="">- Pilih Nilai Sivik -</option>
+                  {senaraiNilaiSivik.map(n => <option key={n} value={n}>{n}</option>)}
+                </select>
+              </div>
+
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Ringkasan Aktiviti</label>
+                <textarea name="aktivitiDijalankan" value={formData.aktivitiDijalankan} placeholder="" onChange={handleInputChange} className="w-full p-5 bg-slate-50 border border-slate-200 rounded-2xl h-36 text-sm outline-none focus:border-indigo-500 transition-all"></textarea>
+              </div>
+
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Refleksi & Impak</label>
+                <textarea name="refleksiImpak" value={formData.refleksiImpak} placeholder="" onChange={handleInputChange} className="w-full p-5 bg-slate-50 border border-slate-200 rounded-2xl h-24 text-sm outline-none focus:border-indigo-500 transition-all"></textarea>
+              </div>
+            </div>
+
+            <section className="bg-slate-50 p-8 rounded-[2rem] border border-slate-100 text-center shadow-inner">
+              <label className={`inline-flex items-center gap-3 px-6 py-3 rounded-full font-black text-[10px] transition-all shadow-md mb-6 cursor-pointer tracking-wider ${images.length >= 2 ? 'bg-slate-200 text-slate-400' : 'bg-slate-900 text-white hover:bg-indigo-600'}`}>
+                <Icon name="camera" size={16} /> MUAT NAIK FOTO AKTIVITI ({images.length}/2)
+                <input type="file" accept="image/*" multiple onChange={handleImageUpload} className="hidden" disabled={images.length >= 2} />
+              </label>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {images.map((img, i) => (
+                  <div key={i} className="relative aspect-video rounded-2xl overflow-hidden border-4 border-white shadow-lg group">
+                    <img src={img} className="w-full h-full object-cover" />
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <button onClick={() => setImages(images.filter((_, idx) => idx !== i))} className="bg-red-500 text-white p-3 rounded-full shadow-lg transform scale-0 group-hover:scale-100 transition-transform">
+                        <Icon name="trash" size={18} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 border-t border-slate-100 pt-8">
+              <div>
+                <label className="text-[9px] font-black text-slate-400 uppercase mb-2 block tracking-widest">Disediakan Oleh</label>
+                <select name="disediakanOleh" value={formData.disediakanOleh} onChange={handleInputChange} className="w-full p-3.5 bg-slate-900 text-white rounded-xl font-bold text-[10px] outline-none shadow-md">
                   <option value="">- Nama Guru -</option>
                   {senaraiGuru.map(g => <option key={g} value={g} className="bg-white text-slate-900">{g}</option>)}
                 </select>
               </div>
               <div className="opacity-80">
-                <label className="text-[10px] font-black text-slate-400 uppercase mb-2 block">Disemak Oleh</label>
-                <div className="p-4 bg-slate-100 rounded-xl font-bold text-xs">{formData.disemakOleh}</div>
+                <label className="text-[9px] font-black text-slate-400 uppercase mb-2 block tracking-widest">Disemak Oleh</label>
+                <div className="p-3.5 bg-slate-100 rounded-xl font-bold text-[10px] text-slate-600 border border-slate-200">{formData.disemakOleh}</div>
               </div>
               <div className="opacity-80">
-                <label className="text-[10px] font-black text-slate-400 uppercase mb-2 block">Disahkan Oleh</label>
-                <div className="p-4 bg-slate-100 rounded-xl font-bold text-xs">{formData.disahkanOleh}</div>
+                <label className="text-[9px] font-black text-slate-400 uppercase mb-2 block tracking-widest">Disahkan Oleh</label>
+                <div className="p-3.5 bg-slate-100 rounded-xl font-bold text-[10px] text-slate-600 border border-slate-200">{formData.disahkanOleh}</div>
               </div>
             </div>
 
-            <div className="flex flex-col md:flex-row gap-4">
-              <button onClick={handleSavePDF} disabled={isGenerating || isSavingToDrive} className={`flex-1 py-6 rounded-3xl font-black text-lg flex items-center justify-center gap-3 transition-all ${isGenerating ? 'bg-slate-300 text-slate-500' : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-xl'}`}>
+            <div className="flex flex-col md:flex-row gap-4 pb-4">
+              <button onClick={handleSavePDF} disabled={isGenerating || isSavingToDrive} className={`flex-1 py-5 rounded-2xl font-black text-sm flex items-center justify-center gap-3 transition-all tracking-wider ${isGenerating ? 'bg-slate-200 text-slate-400' : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-xl active:scale-95'}`}>
                 {isGenerating ? <><Icon name="loader" className="animate-spin-custom" /> MENJANA PDF...</> : <><Icon name="download" /> MUAT TURUN PDF</>}
               </button>
 
-              <button onClick={handleDriveSave} disabled={isGenerating || isSavingToDrive} className={`flex-1 py-6 rounded-3xl font-black text-lg flex items-center justify-center gap-3 transition-all ${isSavingToDrive ? 'bg-slate-300 text-slate-500' : 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-xl'}`}>
+              <button onClick={handleDriveSave} disabled={isGenerating || isSavingToDrive} className={`flex-1 py-5 rounded-2xl font-black text-sm flex items-center justify-center gap-3 transition-all tracking-wider ${isSavingToDrive ? 'bg-slate-200 text-slate-400' : 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-xl active:scale-95'}`}>
                 {isSavingToDrive ? <><Icon name="loader" className="animate-spin-custom" /> MENYIMPAN...</> : <><Icon name="cloud" /> SIMPAN KE DRIVE</>}
               </button>
             </div>
           </div>
+          
+          <footer className="bg-slate-50 py-4 px-6 text-center border-t border-slate-100">
+            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-[0.2em]">UNIT KOKURIKULUM SK SERI BANDI 2</p>
+          </footer>
         </div>
       );
     };
