@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Laporan Aktiviti Kokurikulum - SK Seri Bandi 2</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+    body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    .animate-spin-custom { animation: spin 1s linear infinite; }
+  </style>
+</head>
+<body class="bg-[#f1f5f9] min-h-screen text-slate-800">
+
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    const Icon = ({ name, size = 20, className = "" }) => {
+      const icons = {
+        trash: <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>,
+        camera: <><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></>,
+        loader: <path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83"/>,
+        users: <><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></>,
+        check: <polyline points="20 6 9 17 4 12" />,
+        alert: <><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></>,
+        download: <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>,
+        cloud: <path d="M17.5 19a5.5 5.5 0 0 0 2.5-105 8.5 8.5 0 1 0-15.5 1.5A7 7 0 1 0 5 20h12.5"/>
+      };
+      return (
+        <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+          {icons[name] || null}
+        </svg>
+      );
+    };
+
+    const App = () => {
+      const [libStatus, setLibStatus] = useState({ jspdf: false, autotable: false });
+      const [isGenerating, setIsGenerating] = useState(false);
+      const [isSavingToDrive, setIsSavingToDrive] = useState(false);
+      const [images, setImages] = useState([]);
+      const [notification, setNotification] = useState(null); 
+
+      const schoolLogoUrl = "https://i.postimg.cc/bw5gx6Qd/LOGO_SESDI_removebg_preview.png";
+
+      const [formData, setFormData] = useState({
+        jenisLaporan: '', perjumpaanKali: '', tarikh: '', hari: '', masa: '1.45 - 3.45 PETANG', tempat: '',
+        guruHadir: Array(8).fill(''), hadirLelaki: '0', totalLelaki: '0', hadirPerempuan: '0', totalPerempuan: '0',
+        nilaiSivik: '', aktivitiDijalankan: '', refleksiImpak: '',
+        disediakanOleh: '', jawatanDisediakan: 'GURU PENASIHAT',
+        disemakOleh: 'PENYELARAS UNIT', jawatanDisemak: 'PENYELARAS KOKURIKULUM',
+        disahkanOleh: 'MOHAMAD BIN ALI', jawatanDisahkan: 'PK KOKURIKULUM'
+      });
+
+      const senaraiGuru = [
+        "ABU KASSIM BIN ALI", "AZHAR BIN AHMAD", "FYAIZUL SAZRY BIN SAIDIN", "IBRAHIM BIN MOHD ZIN",
+        "MARZUKI BIN MOKHTAR", "MOHD AZIZI BIN ABDUL RAHMAN", "MOHD SYAZWAN BIN ISMAIL", "MOHD ZAWAWI BIN MOHD AMIN",
+        "MUHAMMAD IRFAN BIN AZMAN", "NIK MUHAMMAD NURAFZA BIN MAD ZAID", "WAN MOHD SABRI BIN WAN HASSAN",
+        "AINUN MARDHIAH BINTI KAMARUZAMAN", "FIRMILIA BINTI AFFANDI", "MAIZATUL AKMAL BINTI AB KARIM @ A BAKAR",
+        "NAJIHAH BINTI A. ZAMANI", "NAWARIAH BINTI ABD MAJID", "NOOR HIDAYU BINTI BULIAMI", "NOR AMIRAH BINTI ABDUL HAMID",
+        "NOR‘AINI BINTI TAHIR @ MOHAMED", "NOR RAINA BINTI AHMAD", "NORDIANA AZIYATI BINTI ABDULLAH",
+        "NURIZAIDAWATY BINTI MD NAWI", "ROBAIYYAH BINTI ALIAS", "ROSLINA BINTI A HAZAH", "SITI AISHAH BINTI MOHD SUBRI",
+        "SITI RUQIYAH BINTI ABDUL HAMID", "UMI SUMAYYAH BINTI MOHD ZAID", "WAN NURUL INSYIRAH BINTI WAN AZHAR", "ZABIDAH BINTI YAHYA"
+      ].sort();
+
+      useEffect(() => {
+        const loadScript = (src) => {
+          return new Promise((resolve, reject) => {
+            const s = document.createElement('script');
+            s.src = src; s.async = true; s.onload = resolve; s.onerror = reject;
+            document.body.appendChild(s);
+          });
+        };
+
+        const initLibs = async () => {
+          try {
+            await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+            setLibStatus(prev => ({ ...prev, jspdf: true }));
+            await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js');
+            setLibStatus(prev => ({ ...prev, autotable: true }));
+          } catch (err) {
+            console.error("Gagal memuatkan pustaka PDF");
+          }
+        };
+
+        initLibs();
+      }, []);
+
+      const handleInputChange = (e) => {
+        const { name, value } = e.target;
+        if (name === 'jenisLaporan') {
+          let p = { nama: "PENYELARAS UNIT", jawatan: "PENYELARAS KOKURIKULUM" };
+          if (value.includes("BADAN BERUNIFORM")) p = { nama: "WAN MOHD SABRI BIN WAN HASSAN", jawatan: "PENYELARAS BADAN BERUNIFORM" };
+          else if (value.includes("KELAB")) p = { nama: "NOR AMIRAH BINTI ABDUL HAMID", jawatan: "PENYELARAS KELAB/PERSATUAN" };
+          else if (value.includes("SUKAN DAN PERMAINAN")) p = { nama: "AZHAR BIN AHMAD", jawatan: "PENYELARAS SUKAN/PERMAINAN" };
+          else if (value.includes("RUMAH SUKAN")) p = { nama: "IBRAHIM BIN MOHD ZIN", jawatan: "PENYELARAS RUMAH SUKAN" };
+          setFormData(prev => ({ ...prev, [name]: value, disemakOleh: p.nama, jawatanDisemak: p.jawatan }));
+        } else if (name === 'tarikh') {
+          const days = ["AHAD", "ISNIN", "SELASA", "RABU", "KHAMIS", "JUMAAT", "SABTU"];
+          setFormData(prev => ({ ...prev, [name]: value, hari: days[new Date(value).getDay()] || '' }));
+        } else {
+          setFormData(prev => ({ ...prev, [name]: value }));
+        }
+      };
+
+      const handleGuruChange = (index, value) => {
+        const newGuru = [...formData.guruHadir];
+        newGuru[index] = value;
+        setFormData(prev => ({ ...prev, guruHadir: newGuru }));
+      };
+
+      const handleImageUpload = (e) => {
+        const files = Array.from(e.target.files);
+        if (images.length + files.length > 2) {
+          setNotification({ type: 'error', message: 'Maksimum hanya 2 keping gambar sahaja dibenarkan.' });
+          return;
+        }
+        files.forEach(file => {
+          const reader = new FileReader();
+          reader.onload = (event) => setImages(prev => prev.length < 2 ? [...prev, event.target.result] : prev);
+          reader.readAsDataURL(file);
+        });
+      };
+
+      // Fungsi untuk menjana nama fail yang bersih
+      const getFileName = () => {
+        const name = formData.disediakanOleh ? formData.disediakanOleh.replace(/\s+/g, '_').toUpperCase() : 'LAPORAN';
+        const date = formData.tarikh || 'BARU';
+        return `LAPORAN_KOKU_${name}_${date}.pdf`;
+      };
+
+      const createPDFInstance = async () => {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const pageHeight = doc.internal.pageSize.getHeight();
+        const margin = 15; 
+        let currentY = 4;
+
+        // Logo
+        try { doc.addImage(schoolLogoUrl, 'PNG', (pageWidth/2) - 10, currentY, 20, 20); currentY += 24; } catch(e) { currentY += 5; }
+        doc.setFont("helvetica", "bold").setFontSize(10.5).text(formData.jenisLaporan, pageWidth/2, currentY, { align: 'center' });
+        currentY += 4;
+        doc.setDrawColor(0).setLineWidth(0.5).line(margin, currentY, pageWidth-margin, currentY);
+        currentY += 8;
+
+        // Maklumat Asas
+        const drawField = (label, value, x, y) => {
+          doc.setFont("helvetica", "bold").setFontSize(9).text(label, x, y);
+          doc.text(":", x + 38, y); 
+          doc.setFont("helvetica", "normal").text(value || '-', x + 41, y);
+        };
+        drawField("PERJUMPAAN KALI", formData.perjumpaanKali, margin, currentY);
+        drawField("TARIKH", formData.tarikh ? formData.tarikh.split('-').reverse().join('/') : '', margin + 95, currentY);
+        currentY += 6;
+        drawField("HARI", formData.hari, margin, currentY);
+        drawField("MASA", formData.masa, margin + 95, currentY);
+        currentY += 6;
+        drawField("TEMPAT", formData.tempat, margin, currentY);
+        currentY += 8;
+
+        // Jadual Guru
+        const guruAktif = formData.guruHadir.filter(n => n.trim() !== "");
+        const rows = [];
+        for (let i = 0; i < 4; i++) rows.push([guruAktif[i] || "", "", guruAktif[i+4] || "", ""]);
+        doc.autoTable({
+          startY: currentY,
+          head: [['Nama Guru Penasihat', 'T/Tangan', 'Nama Guru Penasihat', 'T/Tangan']],
+          body: rows,
+          theme: 'grid',
+          headStyles: { fillColor: [40, 40, 40], fontSize: 8, halign: 'center' },
+          styles: { fontSize: 8 },
+          margin: { left: margin, right: margin }
+        });
+        currentY = doc.lastAutoTable.finalY + 6;
+
+        // Kehadiran
+        doc.setFont("helvetica", "bold").setFontSize(9).text("KEHADIRAN MURID", margin, currentY);
+        currentY += 4;
+        const boxW = (pageWidth - (margin*2) - 10) / 3;
+        [{ l: "LELAKI", v: `${formData.hadirLelaki} / ${formData.totalLelaki}` }, { l: "PEREMPUAN", v: `${formData.hadirPerempuan} / ${formData.totalPerempuan}` }, { l: "JUMLAH", v: `${Number(formData.hadirLelaki)+Number(formData.hadirPerempuan)} / ${Number(formData.totalLelaki)+Number(formData.totalPerempuan)}` }].forEach((s, i) => {
+          doc.setDrawColor(180).rect(margin + i*(boxW+5), currentY, boxW, 10);
+          doc.setFontSize(7).text(s.l, margin + i*(boxW+5) + boxW/2, currentY + 4, { align: 'center' });
+          doc.setFontSize(9).text(s.v, margin + i*(boxW+5) + boxW/2, currentY + 8, { align: 'center' });
+        });
+        currentY += 16;
+
+        // Teks
+        const writeSection = (title, content, maxLines = 4) => {
+          doc.setFont("helvetica", "bold").setFontSize(9).text(title, margin, currentY);
+          currentY += 4; doc.setFont("helvetica", "normal");
+          const lines = doc.splitTextToSize(content || '-', pageWidth - (margin*2));
+          const toShow = lines.slice(0, maxLines);
+          doc.text(toShow, margin, currentY);
+          currentY += (toShow.length * 5) + 4;
+        };
+        writeSection("NILAI SIVIK:", formData.nilaiSivik, 1);
+        writeSection("AKTIVITI DIJALANKAN:", formData.aktivitiDijalankan, 6);
+        writeSection("REFLEKSI / IMPAK:", formData.refleksiImpak, 4);
+
+        // Gambar
+        if (images.length > 0) {
+          const iw = 75; const ih = 40; const gap = 10;
+          const totalW = (images.length * iw) + ((images.length - 1) * gap);
+          let startImgX = (pageWidth - totalW) / 2;
+          images.forEach((img, idx) => {
+            const x = startImgX + (idx * (iw + gap));
+            doc.setDrawColor(0).roundedRect(x, currentY, iw, ih, 1, 1, 'S');
+            try { doc.addImage(img, 'JPEG', x + 0.5, currentY + 0.5, iw - 1, ih - 1); } catch(e) {}
+          });
+        }
+
+        // Tandatangan
+        const bottomY = pageHeight - 40; 
+        const printableWidth = pageWidth - (margin * 2);
+        const col1X = margin;
+        const col2X = margin + (printableWidth * 0.30);
+        const col3X = margin + (printableWidth * 0.65);
+        const drawSignature = (label, name, title, x, maxW) => {
+          doc.setFontSize(8).setFont("helvetica", "normal").text(label + " oleh:", x, bottomY);
+          doc.setFont("helvetica", "bold").setFontSize(9).text(`(${name.toUpperCase()})`, x, bottomY + 18);
+          doc.setFont("helvetica", "normal").setFontSize(7).text(title, x, bottomY + 22, { maxWidth: maxW });
+        };
+        drawSignature("Disediakan", formData.disediakanOleh, "GURU PENASIHAT", col1X, (printableWidth * 0.28));
+        drawSignature("Disemak", formData.disemakOleh, formData.jawatanDisemak, col2X, (printableWidth * 0.32));
+        drawSignature("Disahkan", formData.disahkanOleh, formData.jawatanDisahkan, col3X, (printableWidth * 0.35));
+
+        return doc;
+      };
+
+      const handleSavePDF = async () => {
+        if (!formData.jenisLaporan || !formData.disediakanOleh) {
+            setNotification({ type: 'error', message: 'Sila lengkapkan laporan (termasuk nama guru penyedia) sebelum memuat turun.' });
+            return;
+        }
+        setIsGenerating(true);
+        try {
+          const doc = await createPDFInstance();
+          doc.save(getFileName());
+        } catch (err) {
+          setNotification({ type: 'error', message: 'Ralat menjana PDF.' });
+        }
+        setIsGenerating(false);
+      };
+
+      const handleDriveSave = async () => {
+        if (!libStatus.jspdf || !libStatus.autotable) return;
+        if (!formData.jenisLaporan || !formData.disediakanOleh) {
+            setNotification({ type: 'error', message: 'Sila lengkapkan laporan sebelum menyimpan ke Drive.' });
+            return;
+        }
+
+        setIsSavingToDrive(true);
+        try {
+          const doc = await createPDFInstance();
+          
+          const pdfBase64 = doc.output('datauristring').split(',')[1];
+          const fileName = getFileName();
+
+          const webAppUrl = 'https://script.google.com/macros/s/AKfycbwBxAOWGtwoZohYErXOivknU_rDiLDFugwzHpoHcv-Q0rOu8zJxxta4PEJZ6Sr6BlhX/exec'; 
+
+          const res = await fetch(webAppUrl, {
+            method: 'POST',
+            mode: 'no-cors', 
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ pdfBase64, fileName })
+          });
+
+          setNotification({ 
+            type: 'success', 
+            message: `Aplikasi telah menghantar fail "${fileName}" ke Google Drive anda.` 
+          });
+
+        } catch (e) { 
+          console.error(e); 
+          setNotification({ type: 'error', message: 'Gagal menghantar ke Google Drive. Sila pastikan skrip anda aktif.' });
+        } finally { 
+          setIsSavingToDrive(false); 
+        }
+      };
+
+      return (
+        <div className="max-w-4xl mx-auto my-0 md:my-12 bg-white shadow-2xl rounded-none md:rounded-[3rem] overflow-hidden">
+          
+          {notification && (
+            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[100] flex items-center justify-center p-6">
+              <div className="bg-white rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl">
+                <div className={`w-16 h-16 rounded-full mx-auto flex items-center justify-center mb-4 ${notification.type === 'success' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
+                  <Icon name={notification.type === 'success' ? 'check' : 'alert'} size={32} />
+                </div>
+                <h3 className="text-xl font-bold mb-2 text-slate-900">{notification.type === 'success' ? 'Berjaya' : 'Maklumat'}</h3>
+                <p className="text-slate-500 text-sm mb-6 leading-relaxed">{notification.message}</p>
+                <button onClick={() => setNotification(null)} className="w-full py-4 bg-slate-900 text-white rounded-2xl font-bold hover:bg-black transition-colors">Tutup</button>
+              </div>
+            </div>
+          )}
+
+          <header className="relative bg-slate-900 text-white pt-12 pb-14 px-6 text-center">
+            <img src={schoolLogoUrl} alt="Logo" className="w-24 h-24 mx-auto mb-6 drop-shadow-lg" />
+            <h1 className="text-2xl md:text-3xl font-black uppercase tracking-tight mb-2">LAPORAN AKTIVITI KOKURIKULUM</h1>
+            <h2 className="text-lg font-medium text-slate-400 uppercase tracking-widest">SK Seri Bandi 2</h2>
+          </header>
+
+          <div className="p-6 md:p-12 space-y-10">
+            <div className="space-y-6">
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Jenis Laporan</label>
+                <select name="jenisLaporan" value={formData.jenisLaporan} onChange={handleInputChange} className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-xl font-bold text-slate-700 outline-none focus:border-indigo-500 transition-all">
+                  <option value="">- Pilih Jenis Laporan -</option>
+                  <option>LAPORAN AKTIVITI BADAN BERUNIFORM</option>
+                  <option>LAPORAN AKTIVITI KELAB DAN PERSATUAN</option>
+                  <option>LAPORAN AKTIVITI SUKAN DAN PERMAINAN</option>
+                  <option>LAPORAN AKTIVITI RUMAH SUKAN</option>
+                </select>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                  <label className="text-[10px] font-black text-slate-400 uppercase block mb-1">Perjumpaan Kali Ke-</label>
+                  <input type="number" name="perjumpaanKali" value={formData.perjumpaanKali} onChange={handleInputChange} className="w-full bg-transparent font-black text-xl outline-none" />
+                </div>
+                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                  <label className="text-[10px] font-black text-slate-400 uppercase block mb-1">Tarikh</label>
+                  <input type="date" name="tarikh" value={formData.tarikh} onChange={handleInputChange} className="w-full bg-transparent font-bold outline-none" />
+                </div>
+                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                  <label className="text-[10px] font-black text-slate-400 uppercase block mb-1">Hari</label>
+                  <input type="text" readOnly value={formData.hari} className="w-full bg-transparent font-bold text-indigo-600 outline-none" />
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                 <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                  <label className="text-[10px] font-black text-slate-400 uppercase block mb-1">Tempat</label>
+                  <input type="text" name="tempat" value={formData.tempat} onChange={handleInputChange} className="w-full bg-transparent font-bold outline-none" />
+                </div>
+                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                  <label className="text-[10px] font-black text-slate-400 uppercase block mb-1">Masa</label>
+                  <input type="text" name="masa" value={formData.masa} onChange={handleInputChange} className="w-full bg-transparent font-bold outline-none" />
+                </div>
+              </div>
+            </div>
+
+            <section className="bg-slate-900 rounded-[2rem] p-8">
+              <h2 className="text-white font-black text-xs uppercase tracking-widest mb-6 flex items-center gap-2">
+                <span className="w-1 h-4 bg-indigo-500 rounded-full"></span> Kehadiran Guru
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {formData.guruHadir.map((val, idx) => (
+                  <select key={idx} value={val} onChange={(e) => handleGuruChange(idx, e.target.value)} className="p-3 text-[11px] font-bold bg-slate-800 text-slate-300 border border-slate-700 rounded-xl outline-none focus:border-indigo-500 transition-all">
+                    <option value="">- Guru {idx + 1} -</option>
+                    {senaraiGuru.map(g => <option key={g} value={g} className="bg-white text-slate-900">{g}</option>)}
+                  </select>
+                ))}
+              </div>
+            </section>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {[
+                { label: 'Hadir L', key: 'hadirLelaki', color: 'text-blue-600' },
+                { label: 'Jumlah L', key: 'totalLelaki', color: 'text-slate-400' },
+                { label: 'Hadir P', key: 'hadirPerempuan', color: 'text-pink-600' },
+                { label: 'Jumlah P', key: 'totalPerempuan', color: 'text-slate-400' }
+              ].map(f => (
+                <div key={f.key} className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                  <label className="text-[9px] font-black text-slate-400 uppercase block mb-1">{f.label}</label>
+                  <input type="number" name={f.key} value={formData[f.key]} onChange={handleInputChange} className={`w-full bg-transparent font-black text-2xl outline-none ${f.color}`} />
+                </div>
+              ))}
+            </div>
+
+            <div className="space-y-6">
+              <textarea name="aktivitiDijalankan" value={formData.aktivitiDijalankan} placeholder="Aktiviti dijalankan..." onChange={handleInputChange} className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-2xl h-40 text-sm outline-none focus:border-indigo-500 transition-all shadow-inner"></textarea>
+              <textarea name="refleksiImpak" value={formData.refleksiImpak} placeholder="Refleksi / Impak..." onChange={handleInputChange} className="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-2xl h-24 text-sm outline-none focus:border-indigo-500 transition-all shadow-inner"></textarea>
+            </div>
+
+            <section className="bg-indigo-50/50 p-8 rounded-[2rem] border-2 border-dashed border-indigo-200 text-center">
+              <label className={`inline-flex items-center gap-3 px-8 py-4 rounded-xl font-black text-xs transition-all shadow-lg mb-6 cursor-pointer ${images.length >= 2 ? 'bg-slate-200 text-slate-400' : 'bg-white text-indigo-600 hover:bg-indigo-600 hover:text-white'}`}>
+                <Icon name="camera" size={18} /> MUAT NAIK GAMBAR ({images.length}/2)
+                <input type="file" accept="image/*" multiple onChange={handleImageUpload} className="hidden" disabled={images.length >= 2} />
+              </label>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {images.map((img, i) => (
+                  <div key={i} className="relative aspect-video rounded-2xl overflow-hidden border-4 border-white shadow-xl group">
+                    <img src={img} className="w-full h-full object-cover" />
+                    <button onClick={() => setImages(images.filter((_, idx) => idx !== i))} className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Icon name="trash" size={14} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 border-t pt-8">
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase mb-2 block">Disediakan Oleh</label>
+                <select name="disediakanOleh" value={formData.disediakanOleh} onChange={handleInputChange} className="w-full p-4 bg-slate-900 text-white rounded-xl font-bold text-xs outline-none shadow-lg">
+                  <option value="">- Nama Guru -</option>
+                  {senaraiGuru.map(g => <option key={g} value={g} className="bg-white text-slate-900">{g}</option>)}
+                </select>
+              </div>
+              <div className="opacity-80">
+                <label className="text-[10px] font-black text-slate-400 uppercase mb-2 block">Disemak Oleh</label>
+                <div className="p-4 bg-slate-100 rounded-xl font-bold text-xs">{formData.disemakOleh}</div>
+              </div>
+              <div className="opacity-80">
+                <label className="text-[10px] font-black text-slate-400 uppercase mb-2 block">Disahkan Oleh</label>
+                <div className="p-4 bg-slate-100 rounded-xl font-bold text-xs">{formData.disahkanOleh}</div>
+              </div>
+            </div>
+
+            <div className="flex flex-col md:flex-row gap-4">
+              <button onClick={handleSavePDF} disabled={isGenerating || isSavingToDrive} className={`flex-1 py-6 rounded-3xl font-black text-lg flex items-center justify-center gap-3 transition-all ${isGenerating ? 'bg-slate-300 text-slate-500' : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-xl'}`}>
+                {isGenerating ? <><Icon name="loader" className="animate-spin-custom" /> MENJANA PDF...</> : <><Icon name="download" /> MUAT TURUN PDF</>}
+              </button>
+
+              <button onClick={handleDriveSave} disabled={isGenerating || isSavingToDrive} className={`flex-1 py-6 rounded-3xl font-black text-lg flex items-center justify-center gap-3 transition-all ${isSavingToDrive ? 'bg-slate-300 text-slate-500' : 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-xl'}`}>
+                {isSavingToDrive ? <><Icon name="loader" className="animate-spin-custom" /> MENYIMPAN...</> : <><Icon name="cloud" /> SIMPAN KE DRIVE</>}
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    };
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>
